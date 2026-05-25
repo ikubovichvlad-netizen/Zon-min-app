@@ -298,7 +298,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);pad
   <div class="trust-bar">
     <div class="trust-item"><div class="trust-icon">💳</div><div class="trust-text">Оплата при получении</div></div>
     <div class="trust-item"><div class="trust-icon">🔄</div><div class="trust-text">Обмен при браке 14 дней</div></div>
-    <div class="trust-item"><div class="trust-icon">📦</div><div class="trust-text">Белпочта по всей РБ</div></div>
+    <div class="trust-item"><div class="trust-icon">📦</div><div class="trust-text">Доставка по всей РБ</div></div>
     <div class="trust-item"><div class="trust-icon">🔥</div><div class="trust-text">Новинки каждую неделю</div></div>
   </div>
 
@@ -640,7 +640,7 @@ const CATEGORIES = [
 // ══════════════════════════════════════════════════════
 // ⚙️ НАСТРОЙКИ
 // ══════════════════════════════════════════════════════
-const MANAGER = "manager_zona51";  // username менеджера без @
+const MANAGER = "@artemkasquare";  // username менеджера без @
 
 // ══════════════════════════════════════════════════════
 // КОД — НЕ ТРОГАЙ 😊
@@ -850,17 +850,50 @@ function setDel(t){
   document.getElementById('addrFg').style.display=t==='ship'?'block':'none';
 }
 function submitOrder(){
-  const name=document.getElementById('oName').value.trim();
-  const phone=document.getElementById('oPhone').value.trim();
-  const addr=document.getElementById('oAddr').value.trim();
-  if(!name){toast('Введите имя');return}
-  if(!phone){toast('Введите телефон');return}
-  if(delType==='ship'&&!addr){toast('Введите адрес');return}
-  const data={type:'order',name,phone,delivery:delType,address:addr,items:cart,total:cart.reduce((s,i)=>s+i.price,0)};
-  if(tg?.sendData) tg.sendData(JSON.stringify(data));
-  cart=[];saveCart();
-  document.getElementById('orderForm').style.display='none';
+  const name = document.getElementById('oName').value.trim();
+  const phone = document.getElementById('oPhone').value.trim();
+  const addr = document.getElementById('oAddr').value.trim();
+  
+  if(!name){ toast('Введите имя'); return; }
+  if(!phone){ toast('Введите телефон'); return; }
+  if(delType === 'ship' && !addr){ toast('Введите адрес'); return; }
+  if(cart.length === 0){ toast('Корзина пуста'); return; }
+  
+  const total = cart.reduce((s,i) => s + i.price, 0);
+  
+  // Формируем красивое сообщение
+  let itemsText = cart.map((item, idx) => 
+    `${idx+1}. ${item.name}\n   📏 ${item.size} | 🎨 ${item.color} | 💰 ${item.price} BYN`
+  ).join('\n');
+  
+  let message = `🛒 *НОВЫЙ ЗАКАЗ!*\n\n` +
+    `👤 *Имя:* ${name}\n` +
+    `📞 *Телефон:* ${phone}\n` +
+    `🚚 *Доставка:* ${delType === 'pick' ? 'Самовывоз (Южный, пав. 51/1Б)' : 'Белпочта'}\n` +
+    (delType === 'ship' ? `🏠 *Адрес:* ${addr}\n` : '') +
+    `\n📦 *Товары:*\n${itemsText}\n\n` +
+    `💰 *ИТОГО: ${total} BYN*`;
+  
+  // Кодируем для ссылки
+  const encodedMsg = encodeURIComponent(message);
+  const url = `https://t.me/${MANAGER}?text=${encodedMsg}`;
+  
+  // Открываем чат с тобой с готовым сообщением
+  if(tg && tg.openTelegramLink){
+    tg.openTelegramLink(url);
+  } else {
+    window.open(url, '_blank');
+  }
+  
+  // Показываем экран успеха
+  document.getElementById('orderForm').style.display = 'none';
   document.getElementById('successWrap').classList.add('on');
+  
+  // Чистим корзину
+  cart = [];
+  saveCart();
+  
+  toast('Отправь сообщение менеджеру 👆');
 }
 
 // ── Navigation ────────────────────────────────────────
