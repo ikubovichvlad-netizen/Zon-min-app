@@ -849,51 +849,48 @@ function setDel(t){
   document.getElementById('doShip').classList.toggle('sel',t==='ship');
   document.getElementById('addrFg').style.display=t==='ship'?'block':'none';
 }
-function submitOrder(){
-  const name = document.getElementById('oName').value.trim();
-  const phone = document.getElementById('oPhone').value.trim();
-  const addr = document.getElementById('oAddr').value.trim();
-  
-  if(!name){ toast('Введите имя'); return; }
-  if(!phone){ toast('Введите телефон'); return; }
-  if(delType === 'ship' && !addr){ toast('Введите адрес'); return; }
-  if(cart.length === 0){ toast('Корзина пуста'); return; }
-  
-  const total = cart.reduce((s,i) => s + i.price, 0);
-  
-  // Формируем красивое сообщение
-  let itemsText = cart.map((item, idx) => 
-    `${idx+1}. ${item.name}\n   📏 ${item.size} | 🎨 ${item.color} | 💰 ${item.price} BYN`
-  ).join('\n');
-  
-  let message = `🛒 *НОВЫЙ ЗАКАЗ!*\n\n` +
-    `👤 *Имя:* ${name}\n` +
-    `📞 *Телефон:* ${phone}\n` +
-    `🚚 *Доставка:* ${delType === 'pick' ? 'Самовывоз (Южный, пав. 51/1Б)' : 'Белпочта'}\n` +
-    (delType === 'ship' ? `🏠 *Адрес:* ${addr}\n` : '') +
-    `\n📦 *Товары:*\n${itemsText}\n\n` +
-    `💰 *ИТОГО: ${total} BYN*`;
-  
-  // Кодируем для ссылки
-  const encodedMsg = encodeURIComponent(message);
-  const url = `https://t.me/${MANAGER}?text=${encodedMsg}`;
-  
-  // Открываем чат с тобой с готовым сообщением
-  if(tg && tg.openTelegramLink){
-    tg.openTelegramLink(url);
-  } else {
-    window.open(url, '_blank');
-  }
-  
-  // Показываем экран успеха
-  document.getElementById('orderForm').style.display = 'none';
-  document.getElementById('successWrap').classList.add('on');
-  
-  // Чистим корзину
-  cart = [];
-  saveCart();
-  
-  toast('Отправь сообщение менеджеру 👆');
+function submitOrder() {
+    const name = document.getElementById('oName').value.trim();
+    const phone = document.getElementById('oPhone').value.trim();
+    const addr = document.getElementById('oAddr').value.trim();
+    
+    if(!name){ toast('Введите имя'); return; }
+    if(!phone){ toast('Введите телефон'); return; }
+    if(delType === 'ship' && !addr){ toast('Введите адрес'); return; }
+    if(cart.length === 0){ toast('Корзина пуста'); return; }
+    
+    const total = cart.reduce((s,i) => s + i.price, 0);
+    
+    // Формируем данные заказа для бота
+    const orderData = {
+        name: name,
+        phone: phone,
+        delivery: delType,
+        address: addr,
+        total: total,
+        items: cart.map(item => ({
+            name: item.name,
+            size: item.size,
+            color: item.color,
+            price: item.price,
+            emoji: item.emoji
+        }))
+    };
+    
+    // Отправляем данные боту через Telegram WebApp
+    if (window.Telegram?.WebApp) {
+        Telegram.WebApp.sendData(JSON.stringify(orderData));
+        
+        document.getElementById('orderForm').style.display = 'none';
+        document.getElementById('successWrap').classList.add('on');
+        
+        cart = [];
+        saveCart();
+        
+        toast('Заказ отправлен! Ожидайте подтверждение');
+    } else {
+        toast('Ошибка: откройте магазин через Telegram');
+    }
 }
 
 // ── Navigation ────────────────────────────────────────
