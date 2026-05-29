@@ -9,7 +9,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID"))
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "artemkasquare")  # ← ТВОЙ USERNAME
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(message)s",
@@ -95,8 +95,9 @@ async def handle_webapp_data(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton(f"✅ Подтвердить заказ #{order_id}", callback_data=f"confirm_{order_id}_{buyer_tg_id}")
     ]])
     
+    # Отправляем админу по USERNAME
     await ctx.bot.send_message(
-        chat_id=ADMIN_ID,
+        chat_id=f"@{ADMIN_USERNAME}",  # ← ОТПРАВКА ПО USERNAME
         text=admin_text,
         parse_mode="Markdown",
         reply_markup=keyboard
@@ -104,7 +105,7 @@ async def handle_webapp_data(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(
         f"✅ *Заказ #{order_id} принят!*\n\n"
-        f"Менеджер @manager_zona51 свяжется с тобой для подтверждения.",
+        f"Менеджер @{ADMIN_USERNAME} свяжется с тобой для подтверждения.",
         parse_mode="Markdown"
     )
     
@@ -121,7 +122,7 @@ async def handle_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     try:
         await ctx.bot.send_message(
             chat_id=buyer_tg_id,
-            text=f"🎉 *Ваш заказ #{order_id} подтверждён!*\n\nМенеджер @manager_zona51 скоро свяжется с вами.",
+            text=f"🎉 *Ваш заказ #{order_id} подтверждён!*\n\nМенеджер @{ADMIN_USERNAME} скоро свяжется с вами.",
             parse_mode="Markdown"
         )
         await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup([[
@@ -141,7 +142,7 @@ def main():
     app.add_handler(CallbackQueryHandler(handle_confirm, pattern=r"^confirm_"))
     app.add_handler(CallbackQueryHandler(handle_done, pattern=r"^done$"))
     
-    log.info("🤖 ZONA51BY бот запущен. Жду заказы...")
+    log.info(f"🤖 ZONA51BY бот запущен. Буду писать @{ADMIN_USERNAME}")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
