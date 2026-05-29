@@ -861,7 +861,7 @@ function submitOrder() {
     
     const total = cart.reduce((s,i) => s + i.price, 0);
     
-    // Формируем данные заказа для бота
+    // Данные заказа для бота
     const orderData = {
         name: name,
         phone: phone,
@@ -877,7 +877,7 @@ function submitOrder() {
         }))
     };
     
-    // Отправляем данные боту через Telegram WebApp
+    // Отправляем боту
     if (window.Telegram?.WebApp) {
         Telegram.WebApp.sendData(JSON.stringify(orderData));
         
@@ -887,9 +887,9 @@ function submitOrder() {
         cart = [];
         saveCart();
         
-        toast('Заказ отправлен! Ожидайте подтверждение');
+        toast('Заказ отправлен!');
     } else {
-        toast('Ошибка: откройте магазин через Telegram');
+        toast('Ошибка: откройте через Telegram');
     }
 }
 
