@@ -9,7 +9,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "artemkasquare")  # ← ТВОЙ USERNAME
+ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "5121654036")  # ← ТВОЙ CHAT ID
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(message)s",
@@ -31,6 +31,16 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Привет! Я бот магазина ZONA51BY.\n"
         "Открой магазин через кнопку меню внизу 👇"
+    )
+
+async def cmd_myid(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Показывает пользователю его Telegram ID"""
+    user = update.effective_user
+    await update.message.reply_text(
+        f"🆔 Твой Telegram ID: `{user.id}`\n"
+        f"👤 Username: @{user.username or 'нет'}\n\n"
+        f"Скопируй ID и вставь в .env как ADMIN_CHAT_ID",
+        parse_mode="Markdown"
     )
 
 async def handle_webapp_data(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -95,17 +105,27 @@ async def handle_webapp_data(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton(f"✅ Подтвердить заказ #{order_id}", callback_data=f"confirm_{order_id}_{buyer_tg_id}")
     ]])
     
-    # Отправляем админу по USERNAME
-    await ctx.bot.send_message(
-        chat_id=f"@{ADMIN_USERNAME}",  # ← ОТПРАВКА ПО USERNAME
-        text=admin_text,
-        parse_mode="Markdown",
-        reply_markup=keyboard
-    )
+    # ✅ Исправлено: отправка по числовому chat_id вместо username
+    if ADMIN_CHAT_ID:
+        try:
+            await ctx.bot.send_message(
+                chat_id=int(ADMIN_CHAT_ID),  # ← ЧИСЛОВОЙ ID (5121654036)
+                text=admin_text,
+                parse_mode="Markdown",
+                reply_markup=keyboard
+            )
+            log.info(f"✅ Заказ #{order_id} отправлен админу (chat_id: {ADMIN_CHAT_ID})")
+        except Exception as e:
+            log.error(f"❌ Ошибка отправки админу: {e}")
+            await update.message.reply_text(
+                "⚠️ Заказ принят, но менеджер временно недоступен. Мы свяжемся с вами!"
+            )
+    else:
+        log.error("ADMIN_CHAT_ID не задан!")
     
     await update.message.reply_text(
         f"✅ *Заказ #{order_id} принят!*\n\n"
-        f"Менеджер @{ADMIN_USERNAME} свяжется с тобой для подтверждения.",
+        f"Менеджер скоро свяжется с тобой для подтверждения.",
         parse_mode="Markdown"
     )
     
@@ -122,7 +142,7 @@ async def handle_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     try:
         await ctx.bot.send_message(
             chat_id=buyer_tg_id,
-            text=f"🎉 *Ваш заказ #{order_id} подтверждён!*\n\nМенеджер @{ADMIN_USERNAME} скоро свяжется с вами.",
+            text=f"🎉 *Ваш заказ #{order_id} подтверждён!*\n\nМенеджер скоро свяжется с вами.",
             parse_mode="Markdown"
         )
         await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup([[
@@ -138,11 +158,12 @@ def main():
     app = Application.builder().token(BOT_TOKEN).build()
     
     app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("myid", cmd_myid))  # ← НОВАЯ КОМАНДА
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_webapp_data))
     app.add_handler(CallbackQueryHandler(handle_confirm, pattern=r"^confirm_"))
     app.add_handler(CallbackQueryHandler(handle_done, pattern=r"^done$"))
     
-    log.info(f"🤖 ZONA51BY бот запущен. Буду писать @{ADMIN_USERNAME}")
+    log.info(f"🤖 ZONA51BY бот запущен. Админ chat_id: {ADMIN_CHAT_ID}")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
